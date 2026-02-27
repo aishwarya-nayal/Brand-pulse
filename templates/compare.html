@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare — Brand-Pulse</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff6b35, #f7c59f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-links a {
+            color: #888;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover { color: #ff6b35; }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 2.5rem;
+            font-size: 0.95rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            width: 220px;
+            transition: border 0.2s;
+        }
+
+        input[type="text"]:focus { border-color: #ff6b35; }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover { background: #e5572a; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 14px;
+            padding: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-full {
+            grid-column: 1 / -1;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            color: #555;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .positive { color: #4ade80; }
+        .negative { color: #f87171; }
+        .neutral  { color: #facc15; }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.6rem 1.25rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover { border-color: #ff6b35; color: #ff6b35; }
+
+        .loading { display: none; color: #888; font-size: 0.9rem; margin-top: 0.75rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/" class="logo">Brand-Pulse</a>
+    <div class="nav-links">
+        <a href="/">← Home</a>
+    </div>
+</header>
+
+<h1>Compare Brands</h1>
+<p class="subtitle">Side-by-side Reddit sentiment analysis</p>
+
+<form class="search-form" method="GET" action="/compare" onsubmit="showLoading()">
+    <input type="text" name="brand1" placeholder="Brand 1 (e.g. Nike)" value="{{ brand1 }}" required>
+    <input type="text" name="brand2" placeholder="Brand 2 (e.g. Adidas)" value="{{ brand2 }}" required>
+    <button type="submit">Compare</button>
+</form>
+
+<div class="loading" id="loading">⏳ Scraping Reddit for both brands... may take 1–2 minutes</div>
+
+{% if brand1 and brand2 %}
+
+<div class="charts-grid">
+
+    <!-- Brand 1 Pie -->
+    <div class="card">
+        <h2>{{ brand1 }} — Sentiment</h2>
+        {% if summary1 %}
+        <div class="chart-container">
+            <canvas id="pie1"></canvas>
+        </div>
+        <div class="stat-row">
+            <div class="stat">
+                <div class="stat-value positive">{{ summary1.get('Positive', 0) }}</div>
+                <div class="stat-label">Positive</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value neutral">{{ summary1.get('Neutral', 0) }}</div>
+                <div class="stat-label">Neutral</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value negative">{{ summary1.get('Negative', 0) }}</div>
+                <div class="stat-label">Negative</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">No data yet for "{{ brand1 }}".<br>Search for it first on the home page.</div>
+        {% endif %}
+    </div>
+
+    <!-- Brand 2 Pie -->
+    <div class="card">
+        <h2>{{ brand2 }} — Sentiment</h2>
+        {% if summary2 %}
+        <div class="chart-container">
+            <canvas id="pie2"></canvas>
+        </div>
+        <div class="stat-row">
+            <div class="stat">
+                <div class="stat-value positive">{{ summary2.get('Positive', 0) }}</div>
+                <div class="stat-label">Positive</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value neutral">{{ summary2.get('Neutral', 0) }}</div>
+                <div class="stat-label">Neutral</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value negative">{{ summary2.get('Negative', 0) }}</div>
+                <div class="stat-label">Negative</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">No data yet for "{{ brand2 }}".<br>Search for it first on the home page.</div>
+        {% endif %}
+    </div>
+
+    <!-- Side by side bar chart -->
+    {% if summary1 and summary2 %}
+    <div class="card card-full">
+        <h2>Head-to-Head Comparison</h2>
+        <div class="chart-container">
+            <canvas id="barChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
+
+<a href="/" class="back-btn">← Back to Search</a>
+
+<script>
+    function showLoading() {
+        document.getElementById("loading").style.display = "block";
+    }
+
+    {% if summary1 %}
+    new Chart(document.getElementById("pie1"), {
+        type: "doughnut",
+        data: {
+            labels: ["Positive", "Neutral", "Negative"],
+            datasets: [{
+                data: [
+                    {{ summary1.get('Positive', 0) }},
+                    {{ summary1.get('Neutral', 0) }},
+                    {{ summary1.get('Negative', 0) }}
+                ],
+                backgroundColor: ["#4ade80", "#facc15", "#f87171"],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { position: "bottom", labels: { color: "#aaa", padding: 14, font: { size: 12 } } }
+            },
+            cutout: "65%"
+        }
+    });
+    {% endif %}
+
+    {% if summary2 %}
+    new Chart(document.getElementById("pie2"), {
+        type: "doughnut",
+        data: {
+            labels: ["Positive", "Neutral", "Negative"],
+            datasets: [{
+                data: [
+                    {{ summary2.get('Positive', 0) }},
+                    {{ summary2.get('Neutral', 0) }},
+                    {{ summary2.get('Negative', 0) }}
+                ],
+                backgroundColor: ["#4ade80", "#facc15", "#f87171"],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { position: "bottom", labels: { color: "#aaa", padding: 14, font: { size: 12 } } }
+            },
+            cutout: "65%"
+        }
+    });
+    {% endif %}
+
+    {% if summary1 and summary2 %}
+    new Chart(document.getElementById("barChart"), {
+        type: "bar",
+        data: {
+            labels: ["Positive", "Neutral", "Negative"],
+            datasets: [
+                {
+                    label: "{{ brand1 }}",
+                    data: [
+                        {{ summary1.get('Positive', 0) }},
+                        {{ summary1.get('Neutral', 0) }},
+                        {{ summary1.get('Negative', 0) }}
+                    ],
+                    backgroundColor: "#ff6b35",
+                    borderRadius: 6
+                },
+                {
+                    label: "{{ brand2 }}",
+                    data: [
+                        {{ summary2.get('Positive', 0) }},
+                        {{ summary2.get('Neutral', 0) }},
+                        {{ summary2.get('Negative', 0) }}
+                    ],
+                    backgroundColor: "#3b82f6",
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { labels: { color: "#aaa", font: { size: 13 } } }
+            },
+            scales: {
+                x: { ticks: { color: "#aaa" }, grid: { color: "#2a2a2a" } },
+                y: { ticks: { color: "#aaa" }, grid: { color: "#2a2a2a" } }
+            }
+        }
+    });
+    {% endif %}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ brand }} — Brand-Pulse</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff6b35, #f7c59f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-links a {
+            color: #888;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: #ff6b35; }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 2.5rem;
+            font-size: 0.95rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 14px;
+            padding: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Post scores */
+        .post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .post-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .post-title {
+            flex: 1;
+            font-size: 0.85rem;
+            color: #ccc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .score-bar-wrap {
+            width: 120px;
+            height: 8px;
+            background: #2a2a2a;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .score-bar {
+            height: 100%;
+            border-radius: 99px;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            width: 45px;
+            text-align: right;
+            color: #888;
+        }
+
+        /* Full width card */
+        .card-full {
+            grid-column: 1 / -1;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 0.6rem 1.25rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover { border-color: #ff6b35; color: #ff6b35; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/" class="logo">Brand-Pulse</a>
+    <div class="nav-links">
+        <a href="/">← New Search</a>
+        <a href="/compare">Compare Brands</a>
+    </div>
+</header>
+
+<h1>{{ brand }}</h1>
+<p class="subtitle">Reddit sentiment analysis — {{ total }} comments analyzed</p>
+
+<div class="grid">
+
+    <!-- Pie Chart -->
+    <div class="card-full">
+        <h2>Sentiment Breakdown</h2>
+        <div class="chart-container">
+            <canvas id="pieChart"></canvas>
+        </div>
+    </div>
+
+   
+    <!-- Sentiment Over Time -->
+    <div class="card card-full">
+        <h2>Sentiment Over Time</h2>
+        <div class="chart-container" style="height: 300px;">
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<a href="/" class="back-btn">← Search another brand</a>
+<a href="/refresh?brand={{ brand }}" class="back-btn" style="margin-left: 0.75rem; border-color: #ff6b35; color: #ff6b35;"
+   onclick="this.innerText='⏳ Refreshing...'; this.style.pointerEvents='none';">
+    ↻ Refresh Data
+</a>
+
+<script>
+    const summary = {{ summary | tojson }};
+    const labels = summary.map(s => s[0]);
+    const data = summary.map(s => s[1]);
+
+    const colors = labels.map(l => {
+        if (l === "Positive") return "#4ade80";
+        if (l === "Negative") return "#f87171";
+        return "#facc15";
+    });
+
+    new Chart(document.getElementById("pieChart"), {
+        type: "doughnut",
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 0,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: { color: "#aaa", padding: 16, font: { size: 13 } }
+                }
+            },
+            cutout: "65%"
+        }
+    });
+
+    // Sentiment Over Time
+    const trendRaw = {{ trend_data | tojson }};
+
+    const dates = [...new Set(trendRaw.map(r => r[0]))].sort();
+    const sentiments = ["Positive", "Neutral", "Negative"];
+    const colors2 = { Positive: "#4ade80", Neutral: "#facc15", Negative: "#f87171" };
+
+    const datasets = sentiments.map(label => ({
+        label: label,
+        data: dates.map(date => {
+            const match = trendRaw.find(r => r[0] === date && r[1] === label);
+            return match ? match[2] : 0;
+        }),
+        borderColor: colors2[label],
+        backgroundColor: colors2[label] + "22",
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4
+    }));
+
+    new Chart(document.getElementById("lineChart"), {
+        type: "line",
+        data: { labels: dates, datasets: datasets },
+        options: {
+            plugins: {
+                legend: { labels: { color: "#aaa", font: { size: 13 } } }
+            },
+            scales: {
+                x: { ticks: { color: "#aaa" }, grid: { color: "#2a2a2a" } },
+                y: { ticks: { color: "#aaa" }, grid: { color: "#2a2a2a" }, beginAtZero: true }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
